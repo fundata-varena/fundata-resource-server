@@ -1,1 +1,1 @@
-# fundata_resource_server
+# fundata-resource-server
