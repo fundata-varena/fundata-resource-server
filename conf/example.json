@@ -1,3 +1,32 @@
 {
+    "test_key": "test-key-v",
 
+    "resource_service": {
+        "update_list_uri": "/resource/v1/external/updated_list",
+        "download_uri": "/resource/v1/external/resource",
+        "key": "",
+        "secret": ""
+    },
+
+    "update": {
+        "interval": 20
+    },
+
+    "mysql": {
+        "host": "",
+        "port": 3306,
+        "user": "",
+        "password": "",
+        "db": ""
+    },
+
+    "storage_using": "file",
+
+    "file_storage": {
+        "file_path": "/Users/some/Documents/resources"
+    },
+
+    "oss_storage": {
+
+    }
 }

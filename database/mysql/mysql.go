@@ -8,10 +8,11 @@ import (
 	"github.com/go-xorm/xorm"
 )
 
-var Shared *xorm.Engine
+var shared *xorm.Engine
 
-func Init(config *conf.Conf) error {
-	if config == nil {
+func Init() error {
+	config, err := conf.GetConf()
+	if err != nil {
 		return errors.New("conf is nil")
 	}
 
@@ -32,6 +33,14 @@ func Init(config *conf.Conf) error {
 		return errors.New("ping db err " + err.Error())
 	}
 
-	Shared = engine
+	shared = engine
+
 	return nil
+}
+
+func GetInstance() (*xorm.Engine, error) {
+	if shared == nil {
+		return nil, errors.New("init mysql first please")
+	}
+	return shared, nil
 }

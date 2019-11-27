@@ -7,6 +7,7 @@ import (
 	"github.com/fundata-varena/fundata-resource-server/conf"
 	"github.com/fundata-varena/fundata-resource-server/database/mysql"
 	"github.com/fundata-varena/fundata-resource-server/router"
+	"github.com/fundata-varena/fundata-resource-server/storage"
 	"github.com/fundata-varena/fundata-resource-server/task"
 )
 
@@ -15,31 +16,38 @@ var (
 	updateAutoPtr = flag.Bool("update_auto", false, "")
 )
 
+// todo SDK http client host&port revert
+// todo SDK http header revert
+
 func main() {
 	flag.Parse()
 
 	log.InitShareZapLogger(false)
 
-	err := conf.InitConf(*confFilePtr)
+	// 初始化配置
+	err := conf.Init(*confFilePtr)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	config, err := conf.GetConf()
+	// 根据配置实例化存储
+	err = storage.Init()
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	err = mysql.Init(config)
+	// mysql实例化
+	err = mysql.Init()
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
 	if *updateAutoPtr {
-		go task.IntervalUpdate(config)
+		// 根据配置执行更新任务
+		go task.IntervalUpdate()
 	}
 
 	r := router.NewRouter()

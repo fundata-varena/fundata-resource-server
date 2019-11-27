@@ -13,7 +13,12 @@ func TestGetResourceUpdated(t *testing.T) {
 	fmt.Println(err)
 }
 
+func TestDownloadResource(t *testing.T) {
+	setup()
+	_ = DownloadResource("dota2_team_log", "hfhdfdjdhgh00")
+}
+
 func setup() {
 	log.InitShareZapLogger(false)
-	_ = conf.InitConf("../conf/dev.json")
+	_ = conf.Init("../conf/dev.json")
 }

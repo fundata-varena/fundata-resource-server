@@ -1,5 +1,5 @@
 .idea
-./conf/dev.json
-./conf/pro.json
-./fundata-resource-server
+/conf/dev.json
+/conf/pro.json
+fundata-resource-server
 vendor

@@ -6,8 +6,12 @@ import (
 	"git.vpgame.cn/sh-team/vp-go-sponsors/log"
 	"github.com/fundata-varena/fundata-go-sdk/fundata"
 	"github.com/fundata-varena/fundata-resource-server/conf"
+	"github.com/fundata-varena/fundata-resource-server/storage"
 	"go.uber.org/zap"
+	"net/http"
 	"strconv"
+	"strings"
+	"time"
 )
 
 // 本地单个资源获取
@@ -92,6 +96,10 @@ func DownloadResource(resourceType, resourceId string) error {
 		return err
 	}
 
+	if resourceType == "" || resourceId == "" {
+		return errors.New("resourceType & resourceId required")
+	}
+
 	// 拿到地址
 	fundata.InitClient(config.ResourceService.Key, config.ResourceService.Secret)
 	params := map[string]interface{}{}
@@ -102,12 +110,78 @@ func DownloadResource(resourceType, resourceId string) error {
 		params["resource_id"] = resourceId
 	}
 	resp, err := fundata.Get(config.ResourceService.DownloadURI, params)
+	if err != nil {
+		return errors.New("")
+	}
 
-	fmt.Println(resp)
+	resource, ok := resp.Data.(map[string]interface{})
+	if !ok {
+		return errors.New("response data incorrect")
+	}
 
-	// 下载
+	valueInterface, ok := resource["url"]
+	if !ok {
+		return errors.New("resource url not set")
+	}
 
-	// 转存
+	url, ok := valueInterface.(string)
+	if !ok {
+		return errors.New("resource url not string")
+	}
+
+	// 根据url推断文件类型
+	suffix, err := parseSuffix(url)
+	if err != nil {
+		return errors.New("resource type doesn't support")
+	}
+
+	// 存放目录
+	path := fmt.Sprintf("/%s", resourceType)
+	// 组装本地文件名
+	dstFileName := fmt.Sprintf("%s.%s", resourceId, suffix)
+	// 下载&转存
+	savedAt, err := downloadAndSave(url, path, dstFileName)
+	if err != nil {
+		log.ShareZapLogger().Error(
+			"Download and save err",
+			zap.Any("error", err),
+			zap.String("resource_url", url))
+		return errors.New("downloadAndSave resource err")
+	}
+
+	// 写数据库
+	log.ShareZapLogger().Debug("saved at ", zap.String("@", savedAt))
 
 	return nil
+}
+
+func downloadAndSave(src, path, dstFileName string) (string, error) {
+	// 下载
+	client := http.Client{Timeout: 900 * time.Second}
+	resp, err := client.Get(src)
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	// 转存
+	storageIns, err := storage.GetInstance()
+	if err != nil {
+		return "", err
+	}
+	savedAt, err := storageIns.Store(resp.Body, path, dstFileName)
+	if err != nil {
+		return "", err
+	}
+
+	return savedAt, nil
+}
+
+func parseSuffix(url string) (string, error) {
+	if strings.Contains(url, ".jpg") {
+		return "jpg", nil
+	}
+	if strings.Contains(url, ".png") {
+		return "png", nil
+	}
+	return "", errors.New("type doesn't support")
 }

@@ -11,7 +11,11 @@ import (
 )
 
 //
-func IntervalUpdate(config *conf.Conf) {
+func IntervalUpdate() {
+	config, err := conf.GetConf()
+	if err != nil {
+
+	}
 
 	lock := semaphore.NewWeighted(1)
 
@@ -23,13 +27,12 @@ func IntervalUpdate(config *conf.Conf) {
 			if !lock.TryAcquire(1) {
 				continue
 			}
-			log.ShareZapLogger().Info("IntervalUpdate start")
+			log.ShareZapLogger().Debug("IntervalUpdate start")
 			process()
-			log.ShareZapLogger().Info("IntervalUpdate done")
+			log.ShareZapLogger().Debug("IntervalUpdate done")
 			lock.Release(1)
 		}
 	}
-
 }
 
 //
@@ -45,14 +48,17 @@ func process() {
 
 	for _, row := range rows {
 		wg.Add(1)
-		go func() {
+		go func(r *model.ResourceUpdated) {
 			defer wg.Done()
 			log.ShareZapLogger().Debug(
 				"Downloading",
-				zap.String("resource_type", row.ResourceType),
-				zap.String("resource_id", row.ResourceID))
-			//model.DownloadResource("", "")
-		}()
+				zap.String("resource_type", r.ResourceType),
+				zap.String("resource_id", r.ResourceID))
+			err := model.DownloadResource(r.ResourceType, r.ResourceID)
+			if err != nil {
+				log.ShareZapLogger().Error("DownloadResource err", zap.Error(err))
+			}
+		}(row)
 	}
 
 	wg.Wait()
