@@ -6,6 +6,7 @@ import (
 	"git.vpgame.cn/sh-team/vp-go-sponsors/log"
 	"github.com/fundata-varena/fundata-go-sdk/fundata"
 	"github.com/fundata-varena/fundata-resource-server/conf"
+	"github.com/fundata-varena/fundata-resource-server/database/mysql"
 	"github.com/fundata-varena/fundata-resource-server/storage"
 	"go.uber.org/zap"
 	"net/http"
@@ -14,19 +15,51 @@ import (
 	"time"
 )
 
+type ResourceOps struct {
+
+}
+
 // 本地单个资源获取
-func GetResource() {
+func (ops *ResourceOps) GetResource() {
 
 }
 
 // 本地批量获取
-func GetResources() {
+func (ops *ResourceOps) GetResources() {
 
+}
+
+// 数据入库
+// 更新时间存的是服务端的更新时间，并非生成记录的时间
+func (ops *ResourceOps) InsertOrUpdate(resourceType, resourceId, savedAt string, updateTime time.Time) error {
+	db, err := mysql.GetInstance()
+	if err != nil {
+		return err
+	}
+
+	row := ResourceLocal{}
+	has, err := db.Where("resource_type=? AND identifier=?", resourceType, resourceId).Get(&row)
+	if has {
+		row.DstPath = savedAt
+		row.UpdateTime = updateTime
+		_, err = db.Id(row.Id).Update(&row)
+	} else {
+		row.ResourceType = resourceType
+		row.Identifier = resourceId
+		row.DstPath = savedAt
+		row.AddTime = time.Now()
+		row.UpdateTime = updateTime
+		_, err = db.InsertOne(row)
+	}
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // 获取资源更新列表，for task
 // after Unix时间戳，默认为-1
-func GetResourceUpdated(resourceType string, after int64) ([]*ResourceUpdated, error) {
+func (ops *ResourceOps) GetResourceUpdated(resourceType string, after int64) ([]*ResourceUpdated, error) {
 	config, err := conf.GetConf()
 	if err != nil {
 		return nil, err
@@ -78,7 +111,13 @@ func GetResourceUpdated(resourceType string, after int64) ([]*ResourceUpdated, e
 				res.Size = vStr
 			}
 			if key == "updated_time" {
-				res.UpdatedTime = vStr
+				tmInt64, err := strconv.ParseInt(vStr, 10, 64)
+				if err != nil {
+					log.ShareZapLogger().Error("time.Parse err", zap.Error(err))
+					badRow = true
+					break
+				}
+				res.UpdatedTime = time.Unix(tmInt64, 0)
 			}
 		}
 		if !badRow {
@@ -90,7 +129,7 @@ func GetResourceUpdated(resourceType string, after int64) ([]*ResourceUpdated, e
 }
 
 // 获取下载链接并转存到本地，for task
-func DownloadResource(resourceType, resourceId string) error {
+func (ops *ResourceOps) DownloadResource(resourceType, resourceId string, updateTime time.Time) error {
 	config, err := conf.GetConf()
 	if err != nil {
 		return err
@@ -149,8 +188,13 @@ func DownloadResource(resourceType, resourceId string) error {
 		return errors.New("downloadAndSave resource err")
 	}
 
-	// 写数据库
 	log.ShareZapLogger().Debug("saved at ", zap.String("@", savedAt))
+
+	// 写数据库
+	err = ops.InsertOrUpdate(resourceType, resourceId, savedAt, updateTime)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

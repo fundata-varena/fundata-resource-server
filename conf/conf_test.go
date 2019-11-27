@@ -8,6 +8,6 @@ import (
 
 func TestInitConf(t *testing.T) {
 	log.InitShareZapLogger(false)
-	_, err := Init("./dev.json")
+	err := Init("./dev.json")
 	assert.Equal(t, nil, err)
 }

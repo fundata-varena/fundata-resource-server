@@ -37,9 +37,16 @@ func IntervalUpdate() {
 
 //
 func process() {
+	ops := new(model.ResourceOps)
+
 	// 最近一段时间内的更新
-	rows, err := model.GetResourceUpdated("", 123)
+	rows, err := ops.GetResourceUpdated("", 123)
 	if err != nil {
+		return
+	}
+
+	if len(rows) == 0 {
+		log.ShareZapLogger().Info("any resource updated")
 		return
 	}
 
@@ -54,7 +61,8 @@ func process() {
 				"Downloading",
 				zap.String("resource_type", r.ResourceType),
 				zap.String("resource_id", r.ResourceID))
-			err := model.DownloadResource(r.ResourceType, r.ResourceID)
+			// 服务端的更新时间记录在本地
+			err := ops.DownloadResource(r.ResourceType, r.ResourceID, r.UpdatedTime)
 			if err != nil {
 				log.ShareZapLogger().Error("DownloadResource err", zap.Error(err))
 			}
@@ -62,6 +70,8 @@ func process() {
 	}
 
 	wg.Wait()
+
+	log.ShareZapLogger().Info("updated resources sync done")
 
 	return
 }
