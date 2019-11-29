@@ -28,6 +28,7 @@ func Init() error {
 			return err
 		}
 	} else if storageDriver == "oss" {
+		// 还未实现的
 		instance = new(oss.Oss)
 	} else {
 		return errors.New("storage driver doesn't support")
@@ -38,7 +39,7 @@ func Init() error {
 
 func GetInstance() (Storage, error) {
 	if instance == nil {
-		return nil, errors.New("init first please")
+		return nil, errors.New("init Storage first please")
 	}
 	return instance, nil
 }

@@ -9,6 +9,8 @@ import (
 	"github.com/fundata-varena/fundata-resource-server/router"
 	"github.com/fundata-varena/fundata-resource-server/storage"
 	"github.com/fundata-varena/fundata-resource-server/task"
+	"net/http"
+	_ "net/http/pprof"
 )
 
 var (
@@ -21,6 +23,10 @@ var (
 
 func main() {
 	flag.Parse()
+
+	go func() {
+		_ = http.ListenAndServe("127.0.0.1:6060", nil)
+	}()
 
 	log.InitShareZapLogger(false)
 

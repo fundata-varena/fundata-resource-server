@@ -44,7 +44,8 @@ func (f *File) Store(src io.ReadCloser, path, dstFileName string) (string, error
 		return "", err
 	}
 
-	return file, nil
+	// 文件系统返回相对路径
+	return path + "/" + dstFileName, nil
 }
 
 func pathExists(path string) bool {

@@ -20,13 +20,19 @@ type ResourceOps struct {
 }
 
 // 本地单个资源获取
-func (ops *ResourceOps) GetResource() {
+func (ops *ResourceOps) GetResource(resourceType, id string) (*ResourceLocal, error) {
+	db, err := mysql.GetInstance()
+	if err != nil {
+		return nil, err
+	}
 
-}
+	row := ResourceLocal{}
+	has, err := db.Where("resource_type=? AND identifier=?", resourceType, id).Get(&row)
+	if !has {
+		return nil, nil
+	}
 
-// 本地批量获取
-func (ops *ResourceOps) GetResources() {
-
+	return &row, nil
 }
 
 // 数据入库
