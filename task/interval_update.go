@@ -73,15 +73,12 @@ func process(after int64) {
 		}
 
 		for _, row := range rows {
-			func(r *model.ResourceUpdated) {
-				log.ShareZapLogger().Info("Downloading", zap.String("resource_type", r.ResourceType),
-					zap.String("resource_id", r.ResourceID))
-				// 服务端的更新时间记录在本地
-				err := ops.DownloadResource(r.ResourceType, r.ResourceID, r.UpdatedTime)
-				if err != nil {
-					log.ShareZapLogger().Error("DownloadResource err", zap.Error(err))
-				}
-			}(row)
+			log.ShareZapLogger().Info("Downloading", zap.String("resource_type", row.ResourceType), zap.String("resource_id", row.ResourceID))
+			// 服务端的更新时间记录在本地
+			err := ops.DownloadResource(row.ResourceType, row.ResourceID, row.UpdatedTime)
+			if err != nil {
+				log.ShareZapLogger().Error("DownloadResource err", zap.Error(err))
+			}
 		}
 
 		time.Sleep(200 * time.Millisecond)
