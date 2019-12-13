@@ -11,7 +11,6 @@ import (
 	"go.uber.org/zap"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -65,7 +64,7 @@ func (ops *ResourceOps) InsertOrUpdate(resourceType, resourceId, savedAt string,
 
 // 获取资源更新列表，for task
 // after Unix时间戳，默认为-1
-func (ops *ResourceOps) GetResourceUpdated(resourceType string, after int64) ([]*ResourceUpdated, error) {
+func (ops *ResourceOps) GetResourceUpdated(resourceType string, after int64, page, pageSize int) ([]*ResourceUpdated, error) {
 	config, err := conf.GetConf()
 	if err != nil {
 		return nil, err
@@ -79,6 +78,9 @@ func (ops *ResourceOps) GetResourceUpdated(resourceType string, after int64) ([]
 	if after > -1 {
 		params["after"] = strconv.FormatInt(after,10)
 	}
+	params["page"] = page
+	params["page_size"] = pageSize
+
 	log.ShareZapLogger().Debug("GetResourceUpdated request")
 	resp, err := fundata.Get(config.ResourceService.UpdateListURI, params)
 	log.ShareZapLogger().Debug("GetResourceUpdated response", zap.Any("response", resp))
@@ -154,7 +156,9 @@ func (ops *ResourceOps) DownloadResource(resourceType, resourceId string, update
 	if resourceId != "" {
 		params["resource_id"] = resourceId
 	}
+	log.ShareZapLogger().Debug("DownloadResource request start")
 	resp, err := fundata.Get(config.ResourceService.DownloadURI, params)
+	log.ShareZapLogger().Debug("DownloadResource response", zap.Any("response", resp))
 	if err != nil {
 		return errors.New("")
 	}
@@ -174,16 +178,10 @@ func (ops *ResourceOps) DownloadResource(resourceType, resourceId string, update
 		return errors.New("resource url not string")
 	}
 
-	// 根据url推断文件类型
-	suffix, err := parseSuffix(url)
-	if err != nil {
-		return errors.New("resource type doesn't support")
-	}
-
 	// 存放目录
 	path := fmt.Sprintf("/%s", resourceType)
 	// 组装本地文件名
-	dstFileName := fmt.Sprintf("%s.%s", resourceId, suffix)
+	dstFileName := fmt.Sprintf("%s", resourceId)
 	// 下载&转存
 	savedAt, err := downloadAndSave(url, path, dstFileName)
 	if err != nil {
@@ -201,6 +199,8 @@ func (ops *ResourceOps) DownloadResource(resourceType, resourceId string, update
 	if err != nil {
 		return err
 	}
+
+	time.Sleep(200 * time.Millisecond)
 
 	return nil
 }
@@ -224,14 +224,4 @@ func downloadAndSave(src, path, dstFileName string) (string, error) {
 	}
 
 	return savedAt, nil
-}
-
-func parseSuffix(url string) (string, error) {
-	if strings.Contains(url, ".jpg") {
-		return "jpg", nil
-	}
-	if strings.Contains(url, ".png") {
-		return "png", nil
-	}
-	return "", errors.New("type doesn't support")
 }
