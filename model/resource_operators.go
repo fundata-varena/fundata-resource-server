@@ -34,6 +34,21 @@ func (ops *ResourceOps) GetResource(resourceType, id string) (*ResourceLocal, er
 	return &row, nil
 }
 
+func (ops *ResourceOps) GetLastUpdateTime() (*ResourceLocal, error) {
+	db, err := mysql.GetInstance()
+	if err != nil {
+		return nil, err
+	}
+
+	row := ResourceLocal{}
+	has, err := db.Where("id > 0").Limit(1).Desc("update_time").Get(&row)
+	if !has {
+		return nil, nil
+	}
+
+	return &row, nil
+}
+
 // 数据入库
 // 更新时间存的是服务端的更新时间，并非生成记录的时间
 func (ops *ResourceOps) InsertOrUpdate(resourceType, resourceId, savedAt string, updateTime time.Time) error {
@@ -81,9 +96,9 @@ func (ops *ResourceOps) GetResourceUpdated(resourceType string, after int64, pag
 	params["page"] = page
 	params["page_size"] = pageSize
 
-	log.ShareZapLogger().Debug("GetResourceUpdated request")
+	log.ShareZapLogger().Info("GetResourceUpdated request")
 	resp, err := fundata.Get(config.ResourceService.UpdateListURI, params)
-	log.ShareZapLogger().Debug("GetResourceUpdated response", zap.Any("response", resp))
+	log.ShareZapLogger().Info("GetResourceUpdated response", zap.Any("code", resp.RetCode))
 	if err != nil {
 		return nil, err
 	}
@@ -156,9 +171,9 @@ func (ops *ResourceOps) DownloadResource(resourceType, resourceId string, update
 	if resourceId != "" {
 		params["resource_id"] = resourceId
 	}
-	log.ShareZapLogger().Debug("DownloadResource request start")
+	log.ShareZapLogger().Info("DownloadResource request start")
 	resp, err := fundata.Get(config.ResourceService.DownloadURI, params)
-	log.ShareZapLogger().Debug("DownloadResource response", zap.Any("response", resp))
+	log.ShareZapLogger().Info("DownloadResource response", zap.Any("response", resp))
 	if err != nil {
 		return errors.New("")
 	}

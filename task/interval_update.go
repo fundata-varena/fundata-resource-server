@@ -9,11 +9,15 @@ import (
 	"time"
 )
 
-//
-func IntervalUpdate() {
+func IntervalUpdate(initialized bool) {
 	config, err := conf.GetConf()
 	if err != nil {
+		log.ShareZapLogger().Error("IntervalUpdate get config nil")
+		return
+	}
 
+	if !initialized {
+		initData()
 	}
 
 	lock := semaphore.NewWeighted(1)
@@ -26,16 +30,31 @@ func IntervalUpdate() {
 			if !lock.TryAcquire(1) {
 				continue
 			}
+
+			ops := new(model.ResourceOps)
+			row, err := ops.GetLastUpdateTime()
+			if err != nil {
+				continue
+			}
+			if row == nil {
+				continue
+			}
+
 			log.ShareZapLogger().Debug("IntervalUpdate start")
-			process()
+			process(row.UpdateTime.Unix())
 			log.ShareZapLogger().Debug("IntervalUpdate done")
+
 			lock.Release(1)
 		}
 	}
 }
 
-//
-func process() {
+func initData() {
+	// 初始化起始时间戳为1
+	process(1)
+}
+
+func process(after int64) {
 	ops := new(model.ResourceOps)
 
 	page := 0
@@ -44,7 +63,7 @@ func process() {
 	for true {
 		log.ShareZapLogger().Info("processing", zap.Int("page", page))
 		// 最近一段时间内的更新
-		rows, err := ops.GetResourceUpdated("", 1, page, pageSize)
+		rows, err := ops.GetResourceUpdated("", after, page, pageSize)
 		if err != nil {
 			return
 		}
@@ -53,32 +72,9 @@ func process() {
 			break
 		}
 
-		// 同步到本地
-		//var wg sync.WaitGroup
-		//
-		//for _, row := range rows {
-		//	wg.Add(1)
-		//	go func(r *model.ResourceUpdated) {
-		//		defer wg.Done()
-		//		log.ShareZapLogger().Debug(
-		//			"Downloading",
-		//			zap.String("resource_type", r.ResourceType),
-		//			zap.String("resource_id", r.ResourceID))
-		//		// 服务端的更新时间记录在本地
-		//		err := ops.DownloadResource(r.ResourceType, r.ResourceID, r.UpdatedTime)
-		//		if err != nil {
-		//			log.ShareZapLogger().Error("DownloadResource err", zap.Error(err))
-		//		}
-		//	}(row)
-		//}
-		//
-		//wg.Wait()
-
 		for _, row := range rows {
 			func(r *model.ResourceUpdated) {
-				log.ShareZapLogger().Debug(
-					"Downloading",
-					zap.String("resource_type", r.ResourceType),
+				log.ShareZapLogger().Info("Downloading", zap.String("resource_type", r.ResourceType),
 					zap.String("resource_id", r.ResourceID))
 				// 服务端的更新时间记录在本地
 				err := ops.DownloadResource(r.ResourceType, r.ResourceID, r.UpdatedTime)
@@ -88,7 +84,7 @@ func process() {
 			}(row)
 		}
 
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(200 * time.Millisecond)
 
 		page++
 	}

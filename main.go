@@ -14,8 +14,9 @@ import (
 )
 
 var (
-	confFilePtr = flag.String("conf_file", "", "")
-	updateAutoPtr = flag.Bool("update_auto", false, "")
+	confFilePtr = flag.String("c", "./conf/dev.json", "config file path")
+	updateAutoPtr = flag.Bool("u", true, "if update backend,set true")
+	initialized = flag.Bool("i", false, "if data initialized,set true")
 )
 
 // todo SDK http client host&port revert
@@ -53,7 +54,7 @@ func main() {
 
 	if *updateAutoPtr {
 		// 根据配置执行更新任务
-		go task.IntervalUpdate()
+		go task.IntervalUpdate(*initialized)
 	}
 
 	r := router.NewRouter()

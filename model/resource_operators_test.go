@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"git.vpgame.cn/sh-team/vp-go-sponsors/log"
 	"github.com/fundata-varena/fundata-resource-server/conf"
+	"github.com/fundata-varena/fundata-resource-server/database/mysql"
 	"testing"
 	"time"
 )
@@ -11,8 +12,16 @@ import (
 func TestGetResourceUpdated(t *testing.T) {
 	setup()
 	ops := new(ResourceOps)
-	_, err := ops.GetResourceUpdated("", 213)
+	_, err := ops.GetResourceUpdated("", 213, 0, 20)
 	fmt.Println(err)
+}
+
+func TestResourceOps_GetLastUpdateTime(t *testing.T) {
+	setup()
+	ops := new(ResourceOps)
+	row, err := ops.GetLastUpdateTime()
+	fmt.Println(err)
+	fmt.Println(row.UpdateTime.Unix())
 }
 
 func TestDownloadResource(t *testing.T) {
@@ -25,4 +34,5 @@ func TestDownloadResource(t *testing.T) {
 func setup() {
 	log.InitShareZapLogger(false)
 	_ = conf.Init("../conf/dev.json")
+	_ = mysql.Init()
 }
