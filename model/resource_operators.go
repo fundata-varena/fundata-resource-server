@@ -228,6 +228,11 @@ func downloadAndSave(src, path, dstFileName string) (string, error) {
 		_ = resp.Body.Close()
 	}()
 
+	// 如果是svg的，需要保存后缀
+	if values, ok := resp.Header["Content-Type"]; ok && values[0] == "image/svg+xml" {
+		dstFileName = dstFileName + ".svg"
+	}
+
 	// 转存
 	storageIns, err := storage.GetInstance()
 	if err != nil {

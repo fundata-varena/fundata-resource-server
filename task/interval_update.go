@@ -40,7 +40,7 @@ func IntervalUpdate(initialized bool) {
 				continue
 			}
 
-			log.ShareZapLogger().Debug("IntervalUpdate start")
+			log.ShareZapLogger().Debug("IntervalUpdate start", zap.Time("last update_time", row.UpdateTime))
 			process(row.UpdateTime.Unix())
 			log.ShareZapLogger().Debug("IntervalUpdate done")
 
