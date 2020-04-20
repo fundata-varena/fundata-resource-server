@@ -98,10 +98,11 @@ func (ops *ResourceOps) GetResourceUpdated(resourceType string, after int64, pag
 
 	log.ShareZapLogger().Info("GetResourceUpdated request")
 	resp, err := fundata.Get(config.ResourceService.UpdateListURI, params)
-	log.ShareZapLogger().Info("GetResourceUpdated response", zap.Any("code", resp.RetCode))
 	if err != nil {
+		log.ShareZapLogger().Error("GetResourceUpdated err", zap.Error(err))
 		return nil, err
 	}
+	log.ShareZapLogger().Info("GetResourceUpdated response", zap.Any("code", resp.RetCode))
 
 	rows, ok := resp.Data.([]interface{})
 	if !ok {
